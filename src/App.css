@@ -309,9 +309,8 @@ button:disabled:hover {
   color: var(--text-primary);
 }
 
-.file-cell i {
+.file-cell svg {
   color: var(--text-secondary);
-  font-size: 14px;
   flex-shrink: 0;
 }
 

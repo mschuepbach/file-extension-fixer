@@ -98,7 +98,7 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
                   }}
                 />
                 <span className="file-cell" title={mismatch.relativePath}>
-                  <IconFile stroke={1.5} />
+                  <IconFile size={14} stroke={1.5} />
                   {mismatch.relativePath}
                 </span>
                 <span className="ext-cell">.{mismatch.currentExtension}</span>

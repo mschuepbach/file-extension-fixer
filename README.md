@@ -15,8 +15,8 @@ mov, webm, mkv, avi, 3gp, m4a, wav, flac, ogg, mp3.
 3. Select the ones you want to fix (checkboxes, shift-click for a range) and apply.
 4. If something goes wrong, undo restores the original filenames.
 
-Renames never overwrite an existing file - if the target name is already taken, a numbered suffix
-is added automatically.
+If a fixed name would collide with a file that already exists, a numbered suffix is added instead
+(`photo (1).jpg`) - nothing gets silently overwritten.
 
 ## Development
 

@@ -51,7 +51,7 @@ export function SetupScreen({ onFolderChosen }: Props) {
           </button>
         </div>
         <div className="dropzone-hint">
-          Scans subdirectories automatically for jpg, png, mp4 and mov files
+          Scans subdirectories automatically for common photo, video and audio files
         </div>
       </div>
     </div>

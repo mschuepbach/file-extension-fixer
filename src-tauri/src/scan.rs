@@ -42,7 +42,7 @@ pub struct ScanProgress {
 }
 
 fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<Mismatch> {
-    let detected = detect_extension(entry_path)?;
+    let format = detect_extension(entry_path)?;
 
     let current_extension = entry_path
         .extension()
@@ -50,7 +50,7 @@ fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<M
         .unwrap_or("")
         .to_lowercase();
 
-    if current_extension == detected {
+    if format.accepted.contains(&current_extension.as_str()) {
         return None;
     }
 
@@ -64,7 +64,7 @@ fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<M
         path: entry_path.to_string_lossy().to_string(),
         relative_path,
         current_extension,
-        detected_extension: detected.to_string(),
+        detected_extension: format.canonical.to_string(),
     })
 }
 

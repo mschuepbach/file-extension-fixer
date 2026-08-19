@@ -9,7 +9,15 @@ jobs:
   release:
     permissions:
       contents: write
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+          - platform: ubuntu-22.04
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -18,7 +26,25 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libssl-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            patchelf
+
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -35,15 +61,30 @@ jobs:
           releaseBody: |
             See the assets below to download this version.
 
+            **Windows**
             - `*-setup.exe` — NSIS installer: Start Menu shortcut, uninstaller.
             - `*.msi` — same, via Windows Installer.
             - `file-extension-fixer.exe` — portable binary, no install needed, just run it.
+
+            **macOS**
+            - `*.dmg` — drag-to-Applications installer (universal: Intel + Apple Silicon).
+            - Unsigned: after opening, right-click the app and choose "Open" once to
+              get past Gatekeeper (a plain double-click will refuse to launch it).
+
+            **Linux**
+            - `*.AppImage` — portable, no install: `chmod +x` then run.
+            - `*.deb` / `*.rpm` — for Debian/Ubuntu or Fedora/RHEL-based distros.
           releaseDraft: true
           prerelease: false
+          args: ${{ matrix.args }}
 
       # tauri-action only uploads the installer bundles above, not the raw
-      # unbundled binary. Attach the portable exe to the same release too.
-      - uses: softprops/action-gh-release@v2
+      # unbundled binary. Attach the Windows portable exe to the same release too
+      # (macOS/Linux don't have an equivalent standalone binary outside the
+      # bundle formats already covered by the AppImage / .app).
+      - name: Attach portable Windows binary
+        if: matrix.platform == 'windows-latest'
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: src-tauri/target/release/file-extension-fixer.exe

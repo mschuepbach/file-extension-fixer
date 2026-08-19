@@ -161,6 +161,30 @@ button:disabled:hover {
   margin-top: 12px;
 }
 
+.recent-folders {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.5rem;
+  max-width: 480px;
+}
+
+.recent-folder-chip {
+  font-size: 12px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  max-width: 200px;
+}
+
+.recent-folder-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* --- results screen --- */
 
 .results-header {

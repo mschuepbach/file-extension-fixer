@@ -1,0 +1,137 @@
+import { useMemo, useState } from "react";
+import { IconChevronLeft, IconFolder, IconRefresh, IconX } from "@tabler/icons-react";
+import type { Mismatch } from "../types";
+import { ResultsTable } from "../components/ResultsTable";
+
+interface Props {
+  folder: string;
+  mismatches: Mismatch[];
+  totalScanned: number | null;
+  scanning: boolean;
+  applying: boolean;
+  onChangeFolder: () => void;
+  onRescan: () => void;
+  onApply: (selected: Mismatch[]) => void;
+  onCancelScan: () => void;
+}
+
+export function ResultsScreen({
+  folder,
+  mismatches,
+  totalScanned,
+  scanning,
+  applying,
+  onChangeFolder,
+  onRescan,
+  onApply,
+  onCancelScan,
+}: Props) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [lastIndex, setLastIndex] = useState<number | null>(null);
+
+  function toggleRow(index: number, shiftKey: boolean) {
+    const path = mismatches[index].path;
+
+    setSelected((prev) => {
+      const next = new Set(prev);
+
+      if (shiftKey && lastIndex !== null) {
+        const [start, end] = [lastIndex, index].sort((a, b) => a - b);
+        const shouldSelect = !next.has(path);
+        for (let i = start; i <= end; i++) {
+          const p = mismatches[i].path;
+          if (shouldSelect) {
+            next.add(p);
+          } else {
+            next.delete(p);
+          }
+        }
+      } else {
+        if (next.has(path)) {
+          next.delete(path);
+        } else {
+          next.add(path);
+        }
+      }
+
+      return next;
+    });
+
+    setLastIndex(index);
+  }
+
+  function toggleAll() {
+    setSelected((prev) =>
+      prev.size === mismatches.length ? new Set() : new Set(mismatches.map((m) => m.path))
+    );
+  }
+
+  const selectedMismatches = useMemo(
+    () => mismatches.filter((m) => selected.has(m.path)),
+    [mismatches, selected]
+  );
+
+  return (
+    <div className="app-shell">
+      <div className="results-header">
+        <div>
+          <div className="label">{scanning ? "Scanning" : "Scanned"}</div>
+          <div className="folder">
+            <IconFolder size={16} stroke={1.5} />
+            {folder}
+          </div>
+        </div>
+        <div className="stack-gap">
+          <button onClick={onChangeFolder} disabled={scanning || applying}>
+            <IconChevronLeft size={16} stroke={1.5} />
+            Change folder
+          </button>
+          <button onClick={onRescan} disabled={scanning || applying}>
+            <IconRefresh size={16} stroke={1.5} />
+            Rescan
+          </button>
+        </div>
+      </div>
+
+      <div className="stat-grid">
+        <div className="stat-card">
+          <div className="label">Files scanned</div>
+          <div className="value">{totalScanned ?? "—"}</div>
+        </div>
+        <div className="stat-card">
+          <div className="label">Mismatches found</div>
+          <div className="value danger">{mismatches.length}</div>
+        </div>
+      </div>
+
+      <ResultsTable
+        mismatches={mismatches}
+        selected={selected}
+        onToggleRow={toggleRow}
+        onToggleAll={toggleAll}
+      />
+
+      <div className="apply-bar">
+        {scanning && (
+          <span className="scan-status">
+            <span className="spinner" />
+            Scanning…
+          </span>
+        )}
+        {scanning && (
+          <button onClick={onCancelScan}>
+            <IconX size={16} stroke={1.5} />
+            Cancel
+          </button>
+        )}
+        <button
+          className="primary"
+          disabled={selectedMismatches.length === 0 || applying}
+          onClick={() => onApply(selectedMismatches)}
+        >
+          Apply {selectedMismatches.length} change{selectedMismatches.length === 1 ? "" : "s"}
+        </button>
+      </div>
+    </div>
+  );
+}

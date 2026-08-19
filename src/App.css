@@ -297,6 +297,17 @@ button:disabled:hover {
   width: fit-content;
 }
 
+.detected-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conflict-icon {
+  color: var(--danger-fg);
+  flex-shrink: 0;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;

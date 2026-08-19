@@ -23,7 +23,7 @@ export function onScanProgress(handler: (progress: ScanProgress) => void): Promi
 
 export interface RenameRequest {
   path: string;
-  newExtension: string;
+  canonicalExtension: string;
 }
 
 export function applyRenames(items: RenameRequest[]): Promise<ApplySummary> {

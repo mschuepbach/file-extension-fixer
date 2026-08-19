@@ -61,7 +61,7 @@ function App() {
     setApplying(true);
     try {
       const summary = await applyRenames(
-        selected.map((m) => ({ path: m.path, newExtension: m.detectedExtension }))
+        selected.map((m) => ({ path: m.path, canonicalExtension: m.detectedExtension }))
       );
       setRemaining(mismatches.length - selected.length);
       setDoneSummary(summary);

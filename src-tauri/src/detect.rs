@@ -15,6 +15,45 @@ pub struct FormatMatch {
     pub accepted: &'static [&'static str],
 }
 
+/// Single source of truth for every format this tool understands. Both
+/// magic-byte detection and "is this extension one we recognize at all"
+/// checks (used by the rename-target naming logic) read from this table.
+const KNOWN_FORMATS: &[FormatMatch] = &[
+    FormatMatch { canonical: "jpg", accepted: &["jpg", "jpeg"] },
+    FormatMatch { canonical: "png", accepted: &["png"] },
+    FormatMatch { canonical: "gif", accepted: &["gif"] },
+    FormatMatch { canonical: "webp", accepted: &["webp"] },
+    FormatMatch { canonical: "bmp", accepted: &["bmp"] },
+    FormatMatch { canonical: "tiff", accepted: &["tiff", "tif"] },
+    FormatMatch { canonical: "heic", accepted: &["heic", "heif"] },
+    FormatMatch { canonical: "avif", accepted: &["avif"] },
+    FormatMatch { canonical: "mp4", accepted: &["mp4", "m4v"] },
+    FormatMatch { canonical: "mov", accepted: &["mov", "qt"] },
+    FormatMatch { canonical: "webm", accepted: &["webm", "mkv"] },
+    FormatMatch { canonical: "avi", accepted: &["avi"] },
+    FormatMatch { canonical: "3gp", accepted: &["3gp", "3g2"] },
+    FormatMatch { canonical: "m4a", accepted: &["m4a", "m4b"] },
+    FormatMatch { canonical: "wav", accepted: &["wav"] },
+    FormatMatch { canonical: "flac", accepted: &["flac"] },
+    FormatMatch { canonical: "ogg", accepted: &["ogg", "oga", "opus"] },
+    FormatMatch { canonical: "mp3", accepted: &["mp3"] },
+];
+
+fn lookup(canonical: &str) -> Option<FormatMatch> {
+    KNOWN_FORMATS.iter().find(|f| f.canonical == canonical).copied()
+}
+
+/// True if `ext` (already lowercased) is an extension belonging to any
+/// format we recognize, regardless of which one.
+pub fn is_known_extension(ext: &str) -> bool {
+    KNOWN_FORMATS.iter().any(|f| f.accepted.contains(&ext))
+}
+
+/// The accepted-extensions list for a given canonical format name.
+pub fn accepted_for(canonical: &str) -> Option<&'static [&'static str]> {
+    lookup(canonical).map(|f| f.accepted)
+}
+
 /// Reads the leading bytes of a file and determines its real format
 /// from its magic-byte signature. Only the formats this tool supports
 /// are recognized; anything else (including unreadable files) returns
@@ -29,43 +68,47 @@ pub fn detect_extension(path: &Path) -> Option<FormatMatch> {
 }
 
 fn detect_from_bytes(header: &[u8]) -> Option<FormatMatch> {
+    lookup(detect_canonical(header)?)
+}
+
+fn detect_canonical(header: &[u8]) -> Option<&'static str> {
     if header.len() >= 3 && header[..3] == [0xFF, 0xD8, 0xFF] {
-        return Some(FormatMatch { canonical: "jpg", accepted: &["jpg", "jpeg"] });
+        return Some("jpg");
     }
 
     if header.len() >= 8 && header[..8] == PNG_MAGIC {
-        return Some(FormatMatch { canonical: "png", accepted: &["png"] });
+        return Some("png");
     }
 
     if header.len() >= 4 && &header[..4] == b"GIF8" {
-        return Some(FormatMatch { canonical: "gif", accepted: &["gif"] });
+        return Some("gif");
     }
 
     if header.len() >= 4
         && (header[..4] == TIFF_LE_MAGIC || header[..4] == TIFF_BE_MAGIC)
     {
-        return Some(FormatMatch { canonical: "tiff", accepted: &["tiff", "tif"] });
+        return Some("tiff");
     }
 
     if header.len() >= 2 && &header[..2] == b"BM" {
-        return Some(FormatMatch { canonical: "bmp", accepted: &["bmp"] });
+        return Some("bmp");
     }
 
     if header.len() >= 4 && &header[..4] == b"fLaC" {
-        return Some(FormatMatch { canonical: "flac", accepted: &["flac"] });
+        return Some("flac");
     }
 
     if header.len() >= 4 && &header[..4] == b"OggS" {
-        return Some(FormatMatch { canonical: "ogg", accepted: &["ogg", "oga", "opus"] });
+        return Some("ogg");
     }
 
     // RIFF containers: bytes 0..4 "RIFF", size, then a 4-byte form type
     // at 8..12 that tells us what's actually inside.
     if header.len() >= 12 && &header[..4] == b"RIFF" {
         return match &header[8..12] {
-            b"WEBP" => Some(FormatMatch { canonical: "webp", accepted: &["webp"] }),
-            b"WAVE" => Some(FormatMatch { canonical: "wav", accepted: &["wav"] }),
-            b"AVI " => Some(FormatMatch { canonical: "avi", accepted: &["avi"] }),
+            b"WEBP" => Some("webp"),
+            b"WAVE" => Some("wav"),
+            b"AVI " => Some("avi"),
             _ => None,
         };
     }
@@ -77,22 +120,20 @@ fn detect_from_bytes(header: &[u8]) -> Option<FormatMatch> {
     if header.len() >= 12 && &header[4..8] == b"ftyp" {
         let brand = &header[8..12];
         return Some(match brand {
-            b"qt  " => FormatMatch { canonical: "mov", accepted: &["mov", "qt"] },
-            b"M4A " | b"M4B " => FormatMatch { canonical: "m4a", accepted: &["m4a", "m4b"] },
-            b"3gp4" | b"3gp5" | b"3gp6" | b"3g2a" => {
-                FormatMatch { canonical: "3gp", accepted: &["3gp", "3g2"] }
-            }
-            b"avif" | b"avis" => FormatMatch { canonical: "avif", accepted: &["avif"] },
+            b"qt  " => "mov",
+            b"M4A " | b"M4B " => "m4a",
+            b"3gp4" | b"3gp5" | b"3gp6" | b"3g2a" => "3gp",
+            b"avif" | b"avis" => "avif",
             b"heic" | b"heix" | b"heim" | b"heis" | b"hevc" | b"hevx" | b"hevm" | b"hevs"
-            | b"mif1" | b"msf1" => FormatMatch { canonical: "heic", accepted: &["heic", "heif"] },
-            _ => FormatMatch { canonical: "mp4", accepted: &["mp4", "m4v"] },
+            | b"mif1" | b"msf1" => "heic",
+            _ => "mp4",
         });
     }
 
     // WebM and Matroska share the EBML container signature; we don't
     // distinguish them further and suggest the more common ".webm".
     if header.len() >= 4 && header[..4] == [0x1A, 0x45, 0xDF, 0xA3] {
-        return Some(FormatMatch { canonical: "webm", accepted: &["webm", "mkv"] });
+        return Some("webm");
     }
 
     // MP3: an ID3v2-tagged file starts with "ID3"; an untagged file
@@ -103,7 +144,7 @@ fn detect_from_bytes(header: &[u8]) -> Option<FormatMatch> {
     // often saved that way), which otherwise collides with the loose
     // sync-bits check, so it's excluded explicitly.
     if header.len() >= 3 && &header[..3] == b"ID3" {
-        return Some(FormatMatch { canonical: "mp3", accepted: &["mp3"] });
+        return Some("mp3");
     }
     if header.len() >= 3
         && header[0] == 0xFF
@@ -113,7 +154,7 @@ fn detect_from_bytes(header: &[u8]) -> Option<FormatMatch> {
         let version = (header[1] >> 3) & 0x03;
         let layer = (header[1] >> 1) & 0x03;
         if version != 0x01 && layer != 0x00 {
-            return Some(FormatMatch { canonical: "mp3", accepted: &["mp3"] });
+            return Some("mp3");
         }
     }
 
@@ -265,7 +306,13 @@ mod tests {
         // UTF-16LE, which starts with the same 0xFF lead byte as an MP3
         // frame sync.
         let mut bytes = vec![0xFF, 0xFE];
-        bytes.extend_from_slice("[.ShellClassInfo]".encode_utf16().flat_map(u16::to_le_bytes).collect::<Vec<u8>>().as_slice());
+        bytes.extend_from_slice(
+            "[.ShellClassInfo]"
+                .encode_utf16()
+                .flat_map(u16::to_le_bytes)
+                .collect::<Vec<u8>>()
+                .as_slice(),
+        );
         assert_eq!(detect_from_bytes(&bytes), None);
     }
 
@@ -286,5 +333,20 @@ mod tests {
     fn returns_none_for_short_file() {
         let bytes = [0xFF];
         assert_eq!(detect_from_bytes(&bytes), None);
+    }
+
+    #[test]
+    fn is_known_extension_covers_all_accepted_variants() {
+        assert!(is_known_extension("jpeg"));
+        assert!(is_known_extension("tif"));
+        assert!(is_known_extension("mkv"));
+        assert!(!is_known_extension("dup3"));
+        assert!(!is_known_extension("bak"));
+    }
+
+    #[test]
+    fn accepted_for_returns_the_right_list() {
+        assert_eq!(accepted_for("jpg"), Some(["jpg", "jpeg"].as_slice()));
+        assert_eq!(accepted_for("nonexistent"), None);
     }
 }

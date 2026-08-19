@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { IconFile, IconFolderOpen, IconPlayerPlay } from "@tabler/icons-react";
+import { IconAlertTriangle, IconFile, IconFolderOpen, IconPlayerPlay } from "@tabler/icons-react";
 import type { Mismatch } from "../types";
 import { openPath, revealItemInDir } from "../lib/tauri";
 import { ContextMenu } from "./ContextMenu";
@@ -103,7 +103,22 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
                 </span>
                 <span className="ext-cell">.{mismatch.currentExtension}</span>
                 <span className="ext-cell">→</span>
-                <span className="ext-badge">.{mismatch.detectedExtension}</span>
+                <span className="detected-cell">
+                  <span
+                    className="ext-badge"
+                    title={`Renames to "${mismatch.suggestedName}"`}
+                  >
+                    .{mismatch.detectedExtension}
+                  </span>
+                  {mismatch.hasConflict && (
+                    <IconAlertTriangle
+                      size={14}
+                      stroke={1.5}
+                      className="conflict-icon"
+                      title={`A file named "${mismatch.suggestedName}" already exists here`}
+                    />
+                  )}
+                </span>
               </div>
             );
           })}

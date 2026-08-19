@@ -7,6 +7,7 @@ use tauri::{AppHandle, Emitter, State};
 use walkdir::WalkDir;
 
 use crate::detect::detect_extension;
+use crate::naming::compute_suggested_name;
 
 /// Shared across scans so a "cancel" click can reach the running rayon
 /// pool. Only one scan runs at a time (the UI blocks rescanning while
@@ -25,6 +26,13 @@ pub struct Mismatch {
     pub relative_path: String,
     pub current_extension: String,
     pub detected_extension: String,
+    /// The filename this file would be renamed to. Provisional: computed
+    /// against the current disk state at scan time, not re-checked
+    /// against the rest of the batch. The authoritative rename target
+    /// (with real conflict numbering) is only decided at apply time.
+    pub suggested_name: String,
+    /// Whether `suggested_name` currently collides with an existing file.
+    pub has_conflict: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -60,11 +68,19 @@ fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<M
         .to_string_lossy()
         .replace('\\', "/");
 
+    let suggested_name = compute_suggested_name(entry_path, format.canonical);
+    let has_conflict = entry_path
+        .parent()
+        .map(|parent| parent.join(&suggested_name).exists())
+        .unwrap_or(false);
+
     Some(Mismatch {
         path: entry_path.to_string_lossy().to_string(),
         relative_path,
         current_extension,
         detected_extension: format.canonical.to_string(),
+        suggested_name,
+        has_conflict,
     })
 }
 

@@ -1,5 +1,6 @@
 mod apply;
 mod detect;
+mod naming;
 mod scan;
 
 use apply::apply_renames;

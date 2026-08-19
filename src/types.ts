@@ -3,6 +3,10 @@ export interface Mismatch {
   relativePath: string;
   currentExtension: string;
   detectedExtension: string;
+  /** Provisional - the filename this would be renamed to. */
+  suggestedName: string;
+  /** Provisional - whether suggestedName currently collides with an existing file. */
+  hasConflict: boolean;
 }
 
 export interface ScanSummary {

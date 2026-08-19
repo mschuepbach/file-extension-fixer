@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { IconFile } from "@tabler/icons-react";
+import { IconFile, IconFolderOpen, IconPlayerPlay } from "@tabler/icons-react";
 import type { Mismatch } from "../types";
+import { openPath, revealItemInDir } from "../lib/tauri";
+import { ContextMenu } from "./ContextMenu";
 
 interface Props {
   mismatches: Mismatch[];
@@ -24,6 +26,10 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
   const selectedCount = selected.size;
   const allSelected = mismatches.length > 0 && selectedCount === mismatches.length;
   const someSelected = selectedCount > 0 && !allSelected;
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; mismatch: Mismatch } | null>(
+    null
+  );
 
   useEffect(() => {
     if (headerRef.current) {
@@ -76,6 +82,10 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
                 onClick={(e) => onToggleRow(virtualRow.index, e.shiftKey)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, mismatch });
+                }}
               >
                 <input
                   type="checkbox"
@@ -99,6 +109,34 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
           })}
         </div>
       </div>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: "Open",
+              icon: <IconPlayerPlay size={15} stroke={1.5} />,
+              onClick: () => {
+                openPath(contextMenu.mismatch.path).catch((err) =>
+                  console.error("failed to open file", err)
+                );
+              },
+            },
+            {
+              label: "Open file location",
+              icon: <IconFolderOpen size={15} stroke={1.5} />,
+              onClick: () => {
+                revealItemInDir(contextMenu.mismatch.path).catch((err) =>
+                  console.error("failed to reveal file", err)
+                );
+              },
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import type { ApplySummary, Mismatch, RenameOutcome, ScanProgress, ScanSummary } from "../types";
+
+export { openPath, revealItemInDir };
 
 export function pickFolder(): Promise<string | null> {
   return invoke("pick_folder");

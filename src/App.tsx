@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { SetupScreen } from "./screens/SetupScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
@@ -14,6 +14,18 @@ function App() {
   const [applying, setApplying] = useState(false);
   const [doneSummary, setDoneSummary] = useState<ApplySummary | null>(null);
   const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    // WebView2 shows its own browser-style context menu (Back, Reload,
+    // Inspect...) by default in both dev and production builds. Rows
+    // provide their own menu on right-click, so suppress the native one
+    // everywhere else too rather than leave a mix of behaviors.
+    function suppressNativeContextMenu(e: MouseEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener("contextmenu", suppressNativeContextMenu);
+    return () => window.removeEventListener("contextmenu", suppressNativeContextMenu);
+  }, []);
 
   async function startScan(folderPath: string) {
     setFolder(folderPath);

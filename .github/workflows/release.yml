@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "File Extension Fixer ${{ github.ref_name }}"
+          releaseBody: |
+            See the assets below to download this version.
+
+            - `*-setup.exe` — NSIS installer: Start Menu shortcut, uninstaller.
+            - `*.msi` — same, via Windows Installer.
+            - `File Extension Fixer.exe` — portable binary, no install needed, just run it.
+          releaseDraft: true
+          prerelease: false
+
+      # tauri-action only uploads the installer bundles above, not the raw
+      # unbundled binary. Attach the portable exe to the same release too.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: "src-tauri/target/release/File Extension Fixer.exe"
+          draft: true

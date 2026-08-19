@@ -27,6 +27,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "mschuepbach",
+    "copyright": "Copyright © 2026 mschuepbach",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
+    "shortDescription": "Fix media files with the wrong extension",
+    "homepage": "https://github.com/mschuepbach/file-extension-fixer",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

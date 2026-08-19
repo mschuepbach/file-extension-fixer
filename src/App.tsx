@@ -21,6 +21,7 @@ function App() {
   const [mismatches, setMismatches] = useState<Mismatch[]>([]);
   const [totalScanned, setTotalScanned] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [scanCancelled, setScanCancelled] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyProgress, setApplyProgress] = useState<{ done: number; total: number } | null>(null);
   const [doneSummary, setDoneSummary] = useState<ApplySummary | null>(null);
@@ -46,6 +47,7 @@ function App() {
     setTotalScanned(null);
     setDoneSummary(null);
     setScanning(true);
+    setScanCancelled(false);
 
     let resolveComplete: () => void;
     const completePromise = new Promise<void>((resolve) => {
@@ -60,6 +62,7 @@ function App() {
     });
     const unlistenComplete = await onScanComplete((summary) => {
       setTotalScanned(summary.totalScanned);
+      setScanCancelled(summary.cancelled);
       resolveComplete();
     });
 
@@ -168,6 +171,7 @@ function App() {
       mismatches={mismatches}
       totalScanned={totalScanned}
       scanning={scanning}
+      scanCancelled={scanCancelled}
       applying={applying}
       applyProgress={applyProgress}
       onChangeFolder={handleScanAnotherFolder}

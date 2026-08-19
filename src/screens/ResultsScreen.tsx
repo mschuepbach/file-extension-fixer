@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { IconChevronLeft, IconFolder, IconRefresh, IconX } from "@tabler/icons-react";
+import { IconAlertTriangle, IconChevronLeft, IconFolder, IconRefresh, IconX } from "@tabler/icons-react";
 import type { Mismatch } from "../types";
 import { ResultsTable } from "../components/ResultsTable";
 
@@ -8,6 +8,7 @@ interface Props {
   mismatches: Mismatch[];
   totalScanned: number | null;
   scanning: boolean;
+  scanCancelled: boolean;
   applying: boolean;
   applyProgress: { done: number; total: number } | null;
   onChangeFolder: () => void;
@@ -21,6 +22,7 @@ export function ResultsScreen({
   mismatches,
   totalScanned,
   scanning,
+  scanCancelled,
   applying,
   applyProgress,
   onChangeFolder,
@@ -77,10 +79,18 @@ export function ResultsScreen({
     <div className="app-shell">
       <div className="results-header">
         <div>
-          <div className="label">{scanning ? "Scanning" : "Scanned"}</div>
+          <div className="label">
+            {scanning ? "Scanning" : scanCancelled ? "Scan cancelled" : "Scanned"}
+          </div>
           <div className="folder">
             <IconFolder size={16} stroke={1.5} />
             {folder}
+            {!scanning && scanCancelled && (
+              <span className="cancelled-badge" title="Partial results - the scan was stopped early">
+                <IconAlertTriangle size={13} stroke={1.5} />
+                Partial results
+              </span>
+            )}
           </div>
         </div>
         <div className="stack-gap">

@@ -184,6 +184,18 @@ button:disabled:hover {
   gap: 6px;
 }
 
+.cancelled-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,5 +1,5 @@
 [package]
-name = "tauri-app"
+name = "file-extension-fixer"
 version = "0.1.0"
 description = "Scans a folder for media files whose extension doesn't match their real format and lets you review and fix them"
 authors = []

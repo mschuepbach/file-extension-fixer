@@ -37,7 +37,7 @@ jobs:
 
             - `*-setup.exe` — NSIS installer: Start Menu shortcut, uninstaller.
             - `*.msi` — same, via Windows Installer.
-            - `File Extension Fixer.exe` — portable binary, no install needed, just run it.
+            - `file-extension-fixer.exe` — portable binary, no install needed, just run it.
           releaseDraft: true
           prerelease: false
 
@@ -46,5 +46,5 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: "src-tauri/target/release/File Extension Fixer.exe"
+          files: src-tauri/target/release/file-extension-fixer.exe
           draft: true

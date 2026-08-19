@@ -6,10 +6,13 @@ import { DoneScreen } from "./screens/DoneScreen";
 import {
   applyRenames,
   cancelScan,
+  onApplyComplete,
+  onApplyProgress,
   onMismatchesFound,
   onScanComplete,
   onScanProgress,
   scanFolder,
+  undoLastApply,
 } from "./lib/tauri";
 import type { ApplySummary, Mismatch } from "./types";
 
@@ -19,7 +22,10 @@ function App() {
   const [totalScanned, setTotalScanned] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [applyProgress, setApplyProgress] = useState<{ done: number; total: number } | null>(null);
   const [doneSummary, setDoneSummary] = useState<ApplySummary | null>(null);
+  const [doneKind, setDoneKind] = useState<"applied" | "undone">("applied");
+  const [undoing, setUndoing] = useState(false);
   const [remaining, setRemaining] = useState(0);
 
   useEffect(() => {
@@ -80,16 +86,54 @@ function App() {
 
   async function handleApply(selected: Mismatch[]) {
     setApplying(true);
+    setApplyProgress({ done: 0, total: selected.length });
+
+    let resolveComplete: (summary: ApplySummary) => void;
+    const completePromise = new Promise<ApplySummary>((resolve) => {
+      resolveComplete = resolve;
+    });
+
+    const unlistenProgress = await onApplyProgress((batch) => {
+      setApplyProgress((prev) => (prev ? { ...prev, done: prev.done + batch.length } : prev));
+    });
+    const unlistenComplete = await onApplyComplete((summary) => resolveComplete(summary));
+
     try {
-      const summary = await applyRenames(
-        selected.map((m) => ({ path: m.path, canonicalExtension: m.detectedExtension }))
-      );
+      const items = selected.map((m) => ({ path: m.path, canonicalExtension: m.detectedExtension }));
+      await applyRenames(items);
+      const summary = await completePromise;
       setRemaining(mismatches.length - selected.length);
+      setDoneKind("applied");
       setDoneSummary(summary);
     } catch (err) {
       console.error("apply failed", err);
     } finally {
+      unlistenProgress();
+      unlistenComplete();
       setApplying(false);
+      setApplyProgress(null);
+    }
+  }
+
+  async function handleUndo() {
+    setUndoing(true);
+
+    let resolveComplete: (summary: ApplySummary) => void;
+    const completePromise = new Promise<ApplySummary>((resolve) => {
+      resolveComplete = resolve;
+    });
+    const unlistenComplete = await onApplyComplete((summary) => resolveComplete(summary));
+
+    try {
+      await undoLastApply();
+      const summary = await completePromise;
+      setDoneKind("undone");
+      setDoneSummary(summary);
+    } catch (err) {
+      console.error("undo failed", err);
+    } finally {
+      unlistenComplete();
+      setUndoing(false);
     }
   }
 
@@ -108,9 +152,12 @@ function App() {
     return (
       <DoneScreen
         summary={doneSummary}
+        kind={doneKind}
         remaining={remaining}
+        undoing={undoing}
         onScanAnotherFolder={handleScanAnotherFolder}
         onRescanFolder={() => startScan(folder)}
+        onUndo={handleUndo}
       />
     );
   }
@@ -122,6 +169,7 @@ function App() {
       totalScanned={totalScanned}
       scanning={scanning}
       applying={applying}
+      applyProgress={applyProgress}
       onChangeFolder={handleScanAnotherFolder}
       onRescan={() => startScan(folder)}
       onApply={handleApply}

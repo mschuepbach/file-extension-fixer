@@ -9,6 +9,7 @@ interface Props {
   totalScanned: number | null;
   scanning: boolean;
   applying: boolean;
+  applyProgress: { done: number; total: number } | null;
   onChangeFolder: () => void;
   onRescan: () => void;
   onApply: (selected: Mismatch[]) => void;
@@ -21,6 +22,7 @@ export function ResultsScreen({
   totalScanned,
   scanning,
   applying,
+  applyProgress,
   onChangeFolder,
   onRescan,
   onApply,
@@ -123,6 +125,12 @@ export function ResultsScreen({
             <IconX size={16} stroke={1.5} />
             Cancel
           </button>
+        )}
+        {applying && applyProgress && (
+          <span className="scan-status">
+            <span className="spinner" />
+            Applying… {applyProgress.done} of {applyProgress.total}
+          </span>
         )}
         <button
           className="primary"

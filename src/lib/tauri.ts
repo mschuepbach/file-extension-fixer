@@ -30,6 +30,10 @@ export function applyRenames(items: RenameRequest[]): Promise<ApplySummary> {
   return invoke("apply_renames", { items });
 }
 
+export function undoLastApply(): Promise<ApplySummary> {
+  return invoke("undo_last_apply");
+}
+
 export function onMismatchesFound(handler: (mismatches: Mismatch[]) => void): Promise<UnlistenFn> {
   return listen<Mismatch[]>("scan:mismatches-found", (event) => handler(event.payload));
 }
@@ -42,6 +46,12 @@ export function onScanComplete(handler: (summary: ScanSummary) => void): Promise
   return listen<ScanSummary>("scan:complete", (event) => handler(event.payload));
 }
 
-export function onApplyProgress(handler: (outcome: RenameOutcome) => void): Promise<UnlistenFn> {
-  return listen<RenameOutcome>("apply:progress", (event) => handler(event.payload));
+export function onApplyProgress(handler: (outcomes: RenameOutcome[]) => void): Promise<UnlistenFn> {
+  return listen<RenameOutcome[]>("apply:progress", (event) => handler(event.payload));
+}
+
+/** Same completion-signal pattern as onScanComplete - shared by both
+ * apply_renames and undo_last_apply, which emit on the same channel. */
+export function onApplyComplete(handler: (summary: ApplySummary) => void): Promise<UnlistenFn> {
+  return listen<ApplySummary>("apply:complete", (event) => handler(event.payload));
 }

@@ -30,8 +30,16 @@ export function applyRenames(items: RenameRequest[]): Promise<ApplySummary> {
   return invoke("apply_renames", { items });
 }
 
-export function onMismatchFound(handler: (mismatch: Mismatch) => void): Promise<UnlistenFn> {
-  return listen<Mismatch>("scan:mismatch-found", (event) => handler(event.payload));
+export function onMismatchesFound(handler: (mismatches: Mismatch[]) => void): Promise<UnlistenFn> {
+  return listen<Mismatch[]>("scan:mismatches-found", (event) => handler(event.payload));
+}
+
+/** Fires once, after every mismatch batch has already been emitted - the
+ * reliable signal that the event stream is done, since it travels the
+ * same channel as the mismatch batches (unlike this command's own
+ * invoke() return value, which is a separate, unordered channel). */
+export function onScanComplete(handler: (summary: ScanSummary) => void): Promise<UnlistenFn> {
+  return listen<ScanSummary>("scan:complete", (event) => handler(event.payload));
 }
 
 export function onApplyProgress(handler: (outcome: RenameOutcome) => void): Promise<UnlistenFn> {

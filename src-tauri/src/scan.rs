@@ -49,6 +49,16 @@ pub struct ScanProgress {
     pub scanned: usize,
 }
 
+/// How many mismatches to buffer before flushing a batch event. Emitting
+/// one event per mismatch doesn't scale: `invoke()` (used for this
+/// command's return value) and `emit`/`listen` (used for these events)
+/// are separate channels with no ordering guarantee between them, and at
+/// high volume individual events piling up faster than the frontend can
+/// process them made it look like some were silently dropped. Batching
+/// cuts the event count drastically and keeps the frontend's per-batch
+/// state update closer to O(1) instead of O(n) per mismatch.
+const BATCH_SIZE: usize = 50;
+
 fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<Mismatch> {
     let format = detect_extension(entry_path)?;
 
@@ -115,6 +125,7 @@ pub async fn scan_folder(
     let scanned = AtomicUsize::new(0);
     let mismatches_found = AtomicUsize::new(0);
     let errors: Mutex<Vec<String>> = Mutex::new(Vec::new());
+    let pending: Mutex<Vec<Mismatch>> = Mutex::new(Vec::new());
 
     // Throttle progress events so huge folders don't flood the frontend.
     let progress_every = (candidates.len() / 200).max(1);
@@ -126,8 +137,20 @@ pub async fn scan_folder(
 
         if let Some(mismatch) = to_mismatch(path, &root) {
             mismatches_found.fetch_add(1, Ordering::Relaxed);
-            if let Err(err) = app.emit("scan:mismatch-found", &mismatch) {
-                errors.lock().unwrap().push(err.to_string());
+
+            let batch = {
+                let mut buf = pending.lock().unwrap();
+                buf.push(mismatch);
+                if buf.len() >= BATCH_SIZE {
+                    Some(std::mem::take(&mut *buf))
+                } else {
+                    None
+                }
+            };
+            if let Some(batch) = batch {
+                if let Err(err) = app.emit("scan:mismatches-found", &batch) {
+                    errors.lock().unwrap().push(err.to_string());
+                }
             }
         }
 
@@ -139,6 +162,14 @@ pub async fn scan_folder(
         Ok(())
     });
 
+    // Flush whatever's left in the buffer (fewer than BATCH_SIZE items).
+    let remaining = std::mem::take(&mut *pending.lock().unwrap());
+    if !remaining.is_empty() {
+        if let Err(err) = app.emit("scan:mismatches-found", &remaining) {
+            errors.lock().unwrap().push(err.to_string());
+        }
+    }
+
     if let Some(err) = errors.lock().unwrap().first() {
         return Err(err.clone());
     }
@@ -146,9 +177,17 @@ pub async fn scan_folder(
     let final_scanned = scanned.load(Ordering::Relaxed);
     let _ = app.emit("scan:progress", ScanProgress { scanned: final_scanned });
 
-    Ok(ScanSummary {
+    let summary = ScanSummary {
         total_scanned: final_scanned,
         mismatches_found: mismatches_found.load(Ordering::Relaxed),
         cancelled: outcome.is_err(),
-    })
+    };
+
+    // Emitted last, on the same event channel as the mismatch batches
+    // above, so the frontend has a reliable "the stream is done" signal
+    // to wait for instead of inferring it from this command's return
+    // value (a different, unordered channel).
+    let _ = app.emit("scan:complete", &summary);
+
+    Ok(summary)
 }

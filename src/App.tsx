@@ -3,7 +3,14 @@ import "./App.css";
 import { SetupScreen } from "./screens/SetupScreen";
 import { ResultsScreen } from "./screens/ResultsScreen";
 import { DoneScreen } from "./screens/DoneScreen";
-import { applyRenames, cancelScan, onMismatchFound, onScanProgress, scanFolder } from "./lib/tauri";
+import {
+  applyRenames,
+  cancelScan,
+  onMismatchesFound,
+  onScanComplete,
+  onScanProgress,
+  scanFolder,
+} from "./lib/tauri";
 import type { ApplySummary, Mismatch } from "./types";
 
 function App() {
@@ -34,21 +41,35 @@ function App() {
     setDoneSummary(null);
     setScanning(true);
 
-    const unlistenMismatch = await onMismatchFound((mismatch) => {
-      setMismatches((prev) => [...prev, mismatch]);
+    let resolveComplete: () => void;
+    const completePromise = new Promise<void>((resolve) => {
+      resolveComplete = resolve;
+    });
+
+    const unlistenMismatches = await onMismatchesFound((batch) => {
+      setMismatches((prev) => [...prev, ...batch]);
     });
     const unlistenProgress = await onScanProgress((progress) => {
       setTotalScanned(progress.scanned);
     });
+    const unlistenComplete = await onScanComplete((summary) => {
+      setTotalScanned(summary.totalScanned);
+      resolveComplete();
+    });
 
     try {
-      const summary = await scanFolder(folderPath);
-      setTotalScanned(summary.totalScanned);
+      await scanFolder(folderPath);
+      // scanFolder()'s invoke() resolving isn't a reliable "every
+      // mismatch batch has arrived" signal - invoke and emit/listen are
+      // separate channels with no ordering guarantee between them, so
+      // wait for the scan:complete event itself instead.
+      await completePromise;
     } catch (err) {
       console.error("scan failed", err);
     } finally {
-      unlistenMismatch();
+      unlistenMismatches();
       unlistenProgress();
+      unlistenComplete();
       setScanning(false);
     }
   }

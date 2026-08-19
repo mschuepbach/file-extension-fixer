@@ -108,11 +108,11 @@ export function ResultsScreen({
             {scanning ? "Scanning" : scanCancelled ? "Scan cancelled" : "Scanned"}
           </div>
           <div className="folder">
-            <IconFolder size={16} stroke={1.5} />
+            <IconFolder size={16} stroke={1.5} aria-hidden="true" />
             {folder}
             {!scanning && scanCancelled && (
               <span className="cancelled-badge" title="Partial results - the scan was stopped early">
-                <IconAlertTriangle size={13} stroke={1.5} />
+                <IconAlertTriangle size={13} stroke={1.5} aria-hidden="true" />
                 Partial results
               </span>
             )}
@@ -120,11 +120,11 @@ export function ResultsScreen({
         </div>
         <div className="stack-gap">
           <button onClick={onChangeFolder} disabled={scanning || applying}>
-            <IconChevronLeft size={16} stroke={1.5} />
+            <IconChevronLeft size={16} stroke={1.5} aria-hidden="true" />
             Change folder
           </button>
           <button onClick={onRescan} disabled={scanning || applying}>
-            <IconRefresh size={16} stroke={1.5} />
+            <IconRefresh size={16} stroke={1.5} aria-hidden="true" />
             Rescan
           </button>
         </div>
@@ -133,11 +133,11 @@ export function ResultsScreen({
       <div className="stat-grid">
         <div className="stat-card">
           <div className="label">Files scanned</div>
-          <div className="value">{totalScanned ?? "—"}</div>
+          <div className="value" aria-live="polite">{totalScanned ?? "—"}</div>
         </div>
         <div className="stat-card">
           <div className="label">Mismatches found</div>
-          <div className="value danger">{mismatches.length}</div>
+          <div className="value danger" aria-live="polite">{mismatches.length}</div>
         </div>
       </div>
 
@@ -150,20 +150,20 @@ export function ResultsScreen({
 
       <div className="apply-bar">
         {scanning && (
-          <span className="scan-status">
-            <span className="spinner" />
+          <span className="scan-status" aria-live="polite">
+            <span className="spinner" aria-hidden="true" />
             Scanning…
           </span>
         )}
         {scanning && (
           <button onClick={onCancelScan}>
-            <IconX size={16} stroke={1.5} />
+            <IconX size={16} stroke={1.5} aria-hidden="true" />
             Cancel
           </button>
         )}
         {applying && applyProgress && (
-          <span className="scan-status">
-            <span className="spinner" />
+          <span className="scan-status" aria-live="polite">
+            <span className="spinner" aria-hidden="true" />
             Applying… {applyProgress.done} of {applyProgress.total}
           </span>
         )}

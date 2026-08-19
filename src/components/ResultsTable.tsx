@@ -90,19 +90,31 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
                 <input
                   type="checkbox"
                   checked={isSelected}
+                  aria-label={`Select ${mismatch.relativePath}`}
                   onChange={() => {}}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Space/Enter on a focused checkbox fires a synthetic
+                    // click with detail === 0 (no mouse click count) - a
+                    // real mouse click always has detail >= 1. Mouse
+                    // toggling is already handled below via mousedown, so
+                    // only react here for the keyboard case, or this
+                    // would double-toggle on a real click.
+                    if (e.detail === 0) {
+                      onToggleRow(virtualRow.index, e.shiftKey);
+                    }
+                  }}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     onToggleRow(virtualRow.index, e.shiftKey);
                   }}
                 />
                 <span className="file-cell" title={mismatch.relativePath}>
-                  <IconFile size={14} stroke={1.5} />
+                  <IconFile size={14} stroke={1.5} aria-hidden="true" />
                   {mismatch.relativePath}
                 </span>
                 <span className="ext-cell">.{mismatch.currentExtension}</span>
-                <span className="ext-cell">→</span>
+                <span className="ext-cell" aria-hidden="true">→</span>
                 <span className="detected-cell">
                   <span
                     className="ext-badge"
@@ -115,6 +127,8 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
                       size={14}
                       stroke={1.5}
                       className="conflict-icon"
+                      role="img"
+                      aria-label={`A file named "${mismatch.suggestedName}" already exists here`}
                       title={`A file named "${mismatch.suggestedName}" already exists here`}
                     />
                   )}
@@ -133,7 +147,7 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
           items={[
             {
               label: "Open",
-              icon: <IconPlayerPlay size={15} stroke={1.5} />,
+              icon: <IconPlayerPlay size={15} stroke={1.5} aria-hidden="true" />,
               onClick: () => {
                 openPath(contextMenu.mismatch.path).catch((err) =>
                   console.error("failed to open file", err)
@@ -142,7 +156,7 @@ export function ResultsTable({ mismatches, selected, onToggleRow, onToggleAll }:
             },
             {
               label: "Open file location",
-              icon: <IconFolderOpen size={15} stroke={1.5} />,
+              icon: <IconFolderOpen size={15} stroke={1.5} aria-hidden="true" />,
               onClick: () => {
                 revealItemInDir(contextMenu.mismatch.path).catch((err) =>
                   console.error("failed to reveal file", err)

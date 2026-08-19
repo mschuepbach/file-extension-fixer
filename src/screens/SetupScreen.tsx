@@ -50,7 +50,7 @@ export function SetupScreen({ onFolderChosen }: Props) {
     <div className="app-shell">
       <div className="centered">
         <div className={`dropzone${dragActive ? " drag-active" : ""}`}>
-          <IconFolderPlus className="dropzone-icon" stroke={1.5} />
+          <IconFolderPlus className="dropzone-icon" stroke={1.5} aria-hidden="true" />
           <div className="dropzone-title">Drag a folder here</div>
           <div className="dropzone-or">or</div>
           <button className="primary" onClick={handleBrowse}>
@@ -65,7 +65,7 @@ export function SetupScreen({ onFolderChosen }: Props) {
           <div className="recent-folders">
             {recentFolders.map((folder) => (
               <button key={folder} className="recent-folder-chip" title={folder} onClick={() => chooseFolder(folder)}>
-                <IconFolder size={14} stroke={1.5} />
+                <IconFolder size={14} stroke={1.5} aria-hidden="true" />
                 <span>{folderName(folder)}</span>
               </button>
             ))}

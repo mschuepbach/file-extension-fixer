@@ -26,7 +26,7 @@ export function DoneScreen({
     <div className="app-shell">
       <div className="centered">
         <div className="done-card">
-          <IconCircleCheck stroke={1.5} />
+          <IconCircleCheck stroke={1.5} aria-hidden="true" />
           <div className="headline">
             {summary.renamed} file{summary.renamed === 1 ? "" : "s"} {verb}
             {summary.failed > 0 ? `, ${summary.failed} failed` : ""}
@@ -41,7 +41,7 @@ export function DoneScreen({
           <div className="actions">
             {kind === "applied" && summary.renamed > 0 && (
               <button onClick={onUndo} disabled={undoing}>
-                <IconArrowBackUp size={16} stroke={1.5} />
+                <IconArrowBackUp size={16} stroke={1.5} aria-hidden="true" />
                 {undoing ? "Undoing…" : "Undo"}
               </button>
             )}

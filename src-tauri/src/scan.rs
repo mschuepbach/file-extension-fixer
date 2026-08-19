@@ -7,6 +7,7 @@ use tauri::{AppHandle, Emitter, State};
 use walkdir::WalkDir;
 
 use crate::detect::detect_extension;
+use crate::events::Batcher;
 use crate::naming::compute_suggested_name;
 
 /// Shared across scans so a "cancel" click can reach the running rayon
@@ -49,14 +50,8 @@ pub struct ScanProgress {
     pub scanned: usize,
 }
 
-/// How many mismatches to buffer before flushing a batch event. Emitting
-/// one event per mismatch doesn't scale: `invoke()` (used for this
-/// command's return value) and `emit`/`listen` (used for these events)
-/// are separate channels with no ordering guarantee between them, and at
-/// high volume individual events piling up faster than the frontend can
-/// process them made it look like some were silently dropped. Batching
-/// cuts the event count drastically and keeps the frontend's per-batch
-/// state update closer to O(1) instead of O(n) per mismatch.
+/// How many mismatches to buffer before flushing a batch event - see
+/// `events::Batcher` for why this matters.
 const BATCH_SIZE: usize = 50;
 
 fn to_mismatch(entry_path: &std::path::Path, root: &std::path::Path) -> Option<Mismatch> {
@@ -125,7 +120,7 @@ pub async fn scan_folder(
     let scanned = AtomicUsize::new(0);
     let mismatches_found = AtomicUsize::new(0);
     let errors: Mutex<Vec<String>> = Mutex::new(Vec::new());
-    let pending: Mutex<Vec<Mismatch>> = Mutex::new(Vec::new());
+    let batcher: Batcher<Mismatch> = Batcher::new(BATCH_SIZE);
 
     // Throttle progress events so huge folders don't flood the frontend.
     let progress_every = (candidates.len() / 200).max(1);
@@ -138,16 +133,7 @@ pub async fn scan_folder(
         if let Some(mismatch) = to_mismatch(path, &root) {
             mismatches_found.fetch_add(1, Ordering::Relaxed);
 
-            let batch = {
-                let mut buf = pending.lock().unwrap();
-                buf.push(mismatch);
-                if buf.len() >= BATCH_SIZE {
-                    Some(std::mem::take(&mut *buf))
-                } else {
-                    None
-                }
-            };
-            if let Some(batch) = batch {
+            if let Some(batch) = batcher.push(mismatch) {
                 if let Err(err) = app.emit("scan:mismatches-found", &batch) {
                     errors.lock().unwrap().push(err.to_string());
                 }
@@ -162,8 +148,7 @@ pub async fn scan_folder(
         Ok(())
     });
 
-    // Flush whatever's left in the buffer (fewer than BATCH_SIZE items).
-    let remaining = std::mem::take(&mut *pending.lock().unwrap());
+    let remaining = batcher.flush();
     if !remaining.is_empty() {
         if let Err(err) = app.emit("scan:mismatches-found", &remaining) {
             errors.lock().unwrap().push(err.to_string());

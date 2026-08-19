@@ -1,5 +1,6 @@
 mod apply;
 mod detect;
+mod events;
 mod naming;
 mod scan;
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconAlertTriangle, IconChevronLeft, IconFolder, IconRefresh, IconX } from "@tabler/icons-react";
 import type { Mismatch } from "../types";
 import { ResultsTable } from "../components/ResultsTable";
@@ -74,6 +74,31 @@ export function ResultsScreen({
     () => mismatches.filter((m) => selected.has(m.path)),
     [mismatches, selected]
   );
+
+  // Keyboard shortcuts: Ctrl/Cmd+A selects all, Enter applies the
+  // current selection, Escape clears it. Skipped when an interactive
+  // element already has focus so it can handle its own keys normally.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "BUTTON", "SELECT"].includes(target.tagName)) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setSelected(new Set(mismatches.map((m) => m.path)));
+      } else if (e.key === "Escape") {
+        setSelected(new Set());
+      } else if (e.key === "Enter" && selectedMismatches.length > 0 && !applying) {
+        e.preventDefault();
+        onApply(selectedMismatches);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mismatches, selectedMismatches, applying, onApply]);
 
   return (
     <div className="app-shell">

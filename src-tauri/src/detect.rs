@@ -96,12 +96,25 @@ fn detect_from_bytes(header: &[u8]) -> Option<FormatMatch> {
     }
 
     // MP3: an ID3v2-tagged file starts with "ID3"; an untagged file
-    // starts directly with an MPEG frame sync (11 set bits).
+    // starts directly with an MPEG frame sync (11 set bits), followed by
+    // version/layer bits that must not be the reserved value.
+    //
+    // 0xFF 0xFE is also the UTF-16LE byte-order-mark (e.g. desktop.ini is
+    // often saved that way), which otherwise collides with the loose
+    // sync-bits check, so it's excluded explicitly.
     if header.len() >= 3 && &header[..3] == b"ID3" {
         return Some(FormatMatch { canonical: "mp3", accepted: &["mp3"] });
     }
-    if header.len() >= 2 && header[0] == 0xFF && (header[1] & 0xE0) == 0xE0 {
-        return Some(FormatMatch { canonical: "mp3", accepted: &["mp3"] });
+    if header.len() >= 3
+        && header[0] == 0xFF
+        && header[1] != 0xFE
+        && (header[1] & 0xE0) == 0xE0
+    {
+        let version = (header[1] >> 3) & 0x03;
+        let layer = (header[1] >> 1) & 0x03;
+        if version != 0x01 && layer != 0x00 {
+            return Some(FormatMatch { canonical: "mp3", accepted: &["mp3"] });
+        }
     }
 
     None
@@ -244,6 +257,16 @@ mod tests {
     fn detects_mp3_frame_sync() {
         let bytes = [0xFF, 0xFB, 0x90, 0x00];
         assert_eq!(detect_from_bytes(&bytes).map(|f| f.canonical), Some("mp3"));
+    }
+
+    #[test]
+    fn does_not_mistake_utf16_bom_for_mp3() {
+        // desktop.ini and similar Windows text files are often saved as
+        // UTF-16LE, which starts with the same 0xFF lead byte as an MP3
+        // frame sync.
+        let mut bytes = vec![0xFF, 0xFE];
+        bytes.extend_from_slice("[.ShellClassInfo]".encode_utf16().flat_map(u16::to_le_bytes).collect::<Vec<u8>>().as_slice());
+        assert_eq!(detect_from_bytes(&bytes), None);
     }
 
     #[test]

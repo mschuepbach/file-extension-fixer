@@ -9,7 +9,7 @@ const TIFF_BE_MAGIC: [u8; 4] = [0x4D, 0x4D, 0x00, 0x2A];
 /// A recognized format: `canonical` is the extension suggested on rename,
 /// `accepted` is every extension that should NOT be flagged as a mismatch
 /// (e.g. a jpg-detected file named `.jpeg` is already fine).
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct FormatMatch {
     pub canonical: &'static str,
     pub accepted: &'static [&'static str],

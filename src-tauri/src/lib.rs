@@ -4,7 +4,7 @@ mod events;
 mod naming;
 mod scan;
 
-use apply::apply_renames;
+use apply::{apply_renames, undo_last_apply, UndoState};
 use scan::{cancel_scan, scan_folder, ScanState};
 use tauri_plugin_dialog::DialogExt;
 
@@ -28,11 +28,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(ScanState::default())
+        .manage(UndoState::default())
         .invoke_handler(tauri::generate_handler![
             pick_folder,
             scan_folder,
             cancel_scan,
-            apply_renames
+            apply_renames,
+            undo_last_apply
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
